@@ -77,6 +77,8 @@ export const elfConfigSchema = z.object({
   // ── Risk / plan ──
   slAtrBuffer: z.number().min(0).max(5),
   tp1R: z.number().min(0.1).max(20),
+  /** OPTIONAL: which liquidity may serve as TP2. 'all' = v1.1 (nearest of any kind). */
+  targetSources: z.enum(['all', 'major']),
   minRR: z.number().min(2).max(10).refine((v) => Math.abs(v * 2 - Math.round(v * 2)) < 1e-9, 'Minimum R:R moves in 0.5 steps'),
   /** OPTIONAL: move stop to entry after TP1 (off in v1.1). */
   breakevenAfterTp1: z.boolean(),
@@ -128,6 +130,7 @@ export const ELF_V11_DEFAULTS: ElfConfig = Object.freeze({
   htfEmaLength: 50,
   slAtrBuffer: 0.1,
   tp1R: 1,
+  targetSources: 'all',
   minRR: 3,
   breakevenAfterTp1: false,
   tradeExpiryBars: 0,
@@ -235,6 +238,10 @@ export const CONFIG_FIELDS: ConfigFieldMeta[] = [
   { key: 'htfEmaLength', label: 'Bias EMA length', description: 'EMA length on the bias timeframe.', origin: 'v1.1', group: 'Bias', kind: 'number', min: 1, max: 500, step: 1 },
   { key: 'slAtrBuffer', label: 'Stop buffer (× ATR)', description: 'Stop placed this far beyond the recorded sweep extreme.', origin: 'v1.1', group: 'Risk & Targets', kind: 'number', min: 0, max: 5, step: 0.01 },
   { key: 'tp1R', label: 'Target 1 (R)', description: 'TP1 distance in multiples of risk.', origin: 'v1.1', group: 'Risk & Targets', kind: 'number', min: 0.1, max: 20, step: 0.1 },
+  {
+    key: 'targetSources', label: 'TP2 liquidity sources', description: 'OPTIONAL. v1.1 uses the nearest opposing liquidity of any kind. "Major only" ignores plain swing pivots and targets PDH/PDL, session highs/lows and EQH/EQL. This changes which setups qualify — compare in a backtest before relying on it.',
+    origin: 'optional', group: 'Risk & Targets', kind: 'select', options: [ { value: 'all', label: 'All liquidity (v1.1)' }, { value: 'major', label: 'Major only (no plain swings)' } ],
+  },
   { key: 'minRR', label: 'Minimum R:R (to TP2)', description: '|entry − TP2| ÷ |entry − stop|. Default 3; may be lowered to 2 in 0.5 steps.', origin: 'v1.1', group: 'Risk & Targets', kind: 'number', min: 2, max: 10, step: 0.5 },
   { key: 'breakevenAfterTp1', label: 'Breakeven after TP1', description: 'OPTIONAL. Move the theoretical stop to entry once TP1 is reached.', origin: 'optional', group: 'Risk & Targets', kind: 'boolean' },
   { key: 'tradeExpiryBars', label: 'Trade expiry (bars)', description: 'OPTIONAL. Close an open theoretical trade at the bar close after N bars. 0 = never.', origin: 'optional', group: 'Risk & Targets', kind: 'number', min: 0, max: 10000, step: 1 },

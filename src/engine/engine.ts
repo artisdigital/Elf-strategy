@@ -719,7 +719,9 @@ export class ElfEngine {
 
   private buildSignal(cand: Candidate, c: Candle, i: number, atr: number, inSession: SessionName[], sessionPass: boolean): Signal {
     const long = cand.direction === 'long';
-    const opposing = this.levels.filter((l) => l.status === 'untested' && l.availableIndex <= i && l.side === (long ? 'high' : 'low'));
+    const opposing = this.levels.filter(
+      (l) => l.status === 'untested' && l.availableIndex <= i && l.side === (long ? 'high' : 'low') && (this.config.targetSources === 'all' || (l.kind !== 'SWING_HIGH' && l.kind !== 'SWING_LOW')),
+    );
     const lv = computePlanLevels({
       direction: cand.direction,
       entry: c.close,

@@ -201,7 +201,7 @@ export function runBacktest(input: BacktestInput): BacktestResult {
     timeframe: input.timeframe,
     setup: 'ELF',
     plannedRR: t.plannedRR,
-    compliant: true,
+    compliant: null, // engine trades follow the rules by construction — compliance is a journal metric
     time: t.entryTime,
   });
   const filterReasons: Record<string, number> = {};

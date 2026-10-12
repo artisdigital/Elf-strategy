@@ -173,3 +173,36 @@ describe('Trade outcome tracking', () => {
     expect(f.engine.snapshot().state).toBe('COMPLETED');
   });
 });
+
+describe('OPTIONAL target sources', () => {
+  it("'major' ignores plain swing pivots as TP2 (v1.1 'all' uses them)", () => {
+    const all = new Feed(testConfig());
+    runBullishSetup(all, 120);
+    expect(all.engine.snapshot().lastSignal!.plan.tp2Label).toBe('Swing H');
+    const major = new Feed(testConfig({ targetSources: 'major' }));
+    runBullishSetup(major, 120);
+    const s = major.engine.snapshot().lastSignal!;
+    expect(s.plan.tp2).toBeNull();
+    expect(s.reasons).toContain('No measurable target');
+  });
+});
+
+describe('Intrabar resolution of ambiguous candles', () => {
+  it('uses lower-timeframe candles to order stop vs target when supplied', async () => {
+    const { newTrade, stepTrade } = await import('../../src/engine/trade.js');
+    const bar = { time: 900, open: 100, high: 106, low: 97, close: 104, volume: 1 };
+    // target first, then stop → TP2 (not ambiguous)
+    const a = newTrade('a', { direction: 'long', entry: 100, stop: 98, tp1: 102, tp2: 105 }, 0, 0);
+    stepTrade(a, bar, [
+      { time: 900, open: 100, high: 105.5, low: 99.5, close: 105, volume: 1 },
+      { time: 960, open: 105, high: 106, low: 97, close: 104, volume: 1 },
+    ]);
+    expect(a.outcome).toBe('tp2');
+    expect(a.ambiguous).toBe(false);
+    // without intrabar data → conservative stop-first, flagged
+    const b = newTrade('b', { direction: 'long', entry: 100, stop: 98, tp1: 102, tp2: 105 }, 0, 0);
+    stepTrade(b, bar);
+    expect(b.outcome).toBe('sl');
+    expect(b.ambiguous).toBe(true);
+  });
+});

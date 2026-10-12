@@ -34,7 +34,7 @@ export interface AppContext {
   auth: Auth;
 }
 
-export function createContext(opts: { dataDir: string; db?: Db; adapters?: ProviderAdapter[]; env?: NodeJS.ProcessEnv; feedOptions?: { pollMs?: number; preferStreaming?: boolean }; password?: string }): AppContext {
+export function createContext(opts: { dataDir: string; db?: Db; adapters?: ProviderAdapter[]; env?: NodeJS.ProcessEnv; feedOptions?: { pollMs?: number; preferStreaming?: boolean; maxBackoffMs?: number; closeGraceMs?: number }; password?: string }): AppContext {
   const db = opts.db ?? openDb(opts.dataDir);
   const box = new SecretBox(opts.dataDir, opts.env?.ELF_SECRET_KEY ?? process.env.ELF_SECRET_KEY);
   const registry = new ProviderRegistry(db, box, opts.adapters ?? defaultAdapters(), opts.env ?? process.env);
@@ -326,7 +326,7 @@ export function createApp(ctx: AppContext) {
 
   // ── Backtests ────────────────────────────────────────────────────────────
   const btSchema = z.object({
-    name: z.string().max(100).optional(),
+    name: z.string().max(100).nullable().optional(),
     provider: PROVIDER, symbol: SYMBOL, timeframe: TF,
     from: z.number().int(), to: z.number().int(),
     config: z.unknown().optional(),

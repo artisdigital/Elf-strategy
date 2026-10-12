@@ -1,11 +1,15 @@
 // SQLite persistence (Node's built-in node:sqlite — no native add-ons).
 // Schema changes are applied through numbered, append-only migrations.
 
-import { DatabaseSync } from 'node:sqlite';
 import fs from 'node:fs';
+import { createRequire } from 'node:module';
+import type { DatabaseSync as DatabaseSyncType } from 'node:sqlite';
 import path from 'node:path';
 
-export type Db = DatabaseSync;
+// Loaded via require so test tooling cannot rewrite the 'node:' prefix (sqlite exists only as node:sqlite).
+const { DatabaseSync } = createRequire(import.meta.url)('node:sqlite') as typeof import('node:sqlite');
+
+export type Db = DatabaseSyncType;
 
 const MIGRATIONS: { id: number; name: string; sql: string }[] = [
   {

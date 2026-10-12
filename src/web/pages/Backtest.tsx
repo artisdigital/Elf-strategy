@@ -139,7 +139,7 @@ export function Backtest() {
         </div>
         <div className="row gap wrap">
           <button className="btn btn-primary" disabled={running} onClick={run}>{running ? 'Running…' : 'Run backtest'}</button>
-          <span className="muted small">Uses your current ELF rules (config {elf ? '' : '—'}). Large ranges on 1m–5m data take longer to download the first time; candles are cached.</span>
+          <span className="muted small">Uses your current ELF rules from Settings & Rules (stored with the result). Large ranges on 1m–5m data take longer to download the first time; candles are cached.</span>
         </div>
       </Card>
 
