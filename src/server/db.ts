@@ -128,6 +128,11 @@ const MIGRATIONS: { id: number; name: string; sql: string }[] = [
     name: 'journal ELF checklist',
     sql: `ALTER TABLE journal ADD COLUMN checklist TEXT;`,
   },
+  {
+    id: 3,
+    name: 'web push subscriptions',
+    sql: `CREATE TABLE push_subscriptions (endpoint TEXT PRIMARY KEY, keys TEXT NOT NULL, user_agent TEXT, created_at INTEGER NOT NULL);`,
+  },
 ];
 
 export function openDb(dataDir: string): Db {

@@ -8,7 +8,7 @@ export default defineConfig({
   workers: 1,
   use: { baseURL: 'http://localhost:8799' },
   webServer: {
-    command: 'rm -rf ./data/e2e && npm run build >/dev/null && ELF_PORT=8799 ELF_DATA_DIR=./data/e2e NODE_ENV=production npx tsx src/server/index.ts',
+    command: 'rm -rf ./data/e2e && npm run build >/dev/null && ELF_PORT=8799 ELF_DATA_DIR=./data/e2e ELF_ALLOW_NO_PASSWORD=1 NODE_ENV=production npx tsx src/server/index.ts',
     url: 'http://localhost:8799/api/health',
     timeout: 180_000,
     reuseExistingServer: false,

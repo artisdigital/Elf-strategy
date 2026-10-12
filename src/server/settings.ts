@@ -16,6 +16,7 @@ export const appSettingsSchema = z.object({
     preset: z.enum(['all', 'preliminary', 'confirmation', 'entry', 'custom']),
     categories: z.object({ preliminary: z.boolean(), confirmation: z.boolean(), entry: z.boolean(), outcome: z.boolean(), invalidation: z.boolean(), feed: z.boolean(), plan: z.boolean() }),
     browserNotifications: z.boolean(),
+    push: z.boolean(),
     webhook: z.object({ enabled: z.boolean(), url: z.string().url().startsWith('https://').nullable() }),
   }),
   chart: z.object({

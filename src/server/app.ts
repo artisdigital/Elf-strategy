@@ -19,6 +19,7 @@ import { PlanService } from './plans.js';
 import { JournalService } from './journal.js';
 import { SettingsService } from './settings.js';
 import { Auth } from './auth.js';
+import { PushService } from './push.js';
 
 export interface AppContext {
   db: Db;
@@ -32,9 +33,10 @@ export interface AppContext {
   journal: JournalService;
   settings: SettingsService;
   auth: Auth;
+  push: PushService;
 }
 
-export function createContext(opts: { dataDir: string; db?: Db; adapters?: ProviderAdapter[]; env?: NodeJS.ProcessEnv; feedOptions?: { pollMs?: number; preferStreaming?: boolean; maxBackoffMs?: number; closeGraceMs?: number }; password?: string }): AppContext {
+export function createContext(opts: { dataDir: string; db?: Db; adapters?: ProviderAdapter[]; env?: NodeJS.ProcessEnv; pushFetch?: typeof fetch; feedOptions?: { pollMs?: number; preferStreaming?: boolean; maxBackoffMs?: number; closeGraceMs?: number }; password?: string }): AppContext {
   const db = opts.db ?? openDb(opts.dataDir);
   const box = new SecretBox(opts.dataDir, opts.env?.ELF_SECRET_KEY ?? process.env.ELF_SECRET_KEY);
   const registry = new ProviderRegistry(db, box, opts.adapters ?? defaultAdapters(), opts.env ?? process.env);
@@ -43,12 +45,14 @@ export function createContext(opts: { dataDir: string; db?: Db; adapters?: Provi
   const feeds = new FeedManager(registry, store, { historyBars: settings.app().chart.historyBars, ...opts.feedOptions });
   const alerts = new AlertService(db, () => settings.alertPrefs());
   alerts.addChannel(new WebhookChannel(() => settings.alertPrefs().webhook.url));
+  const push = new PushService(db, opts.dataDir, opts.pushFetch ?? fetch, opts.env ?? process.env);
+  alerts.addChannel(push);
   const monitors = new MonitorManager(feeds, alerts, registry, () => settings.elf());
   const plans = new PlanService(db, feeds, alerts);
   const journal = new JournalService(db);
   const auth = new Auth(opts.password ?? process.env.ELF_APP_PASSWORD);
   feeds.on('status', (s, prev) => alerts.feedChange(s.key, s.symbol, s.timeframe, s.provider, s.status, prev, s.message));
-  return { db, dataDir: opts.dataDir, registry, store, feeds, monitors, alerts, plans, journal, settings, auth };
+  return { db, dataDir: opts.dataDir, registry, store, feeds, monitors, alerts, plans, journal, settings, auth, push };
 }
 
 export function startBackground(ctx: AppContext) {
@@ -84,7 +88,9 @@ function sseInit(res: Response) {
 export function createApp(ctx: AppContext) {
   const app = express();
   app.disable('x-powered-by');
-  app.set('trust proxy', 'loopback');
+  // Behind a hosting proxy (Render, Fly, nginx) set ELF_TRUST_PROXY to the number of proxy hops (usually 1).
+  const hops = Number(process.env.ELF_TRUST_PROXY);
+  app.set('trust proxy', Number.isInteger(hops) && hops > 0 ? hops : 'loopback');
   app.use((_req, res, next) => {
     res.setHeader('X-Content-Type-Options', 'nosniff');
     res.setHeader('Referrer-Policy', 'no-referrer');
@@ -274,6 +280,23 @@ export function createApp(ctx: AppContext) {
       ctx.feeds.off('status', onStatus);
     });
   });
+
+  // ── Web Push ─────────────────────────────────────────────────────────────
+  api.get('/push/key', (_req, res) => res.json({ publicKey: ctx.push.publicKey }));
+  api.get('/push/subscriptions', (_req, res) => res.json(ctx.push.list().map((s) => ({ ...s, endpoint: s.endpoint.replace(/^(https?:\/\/[^/]+).*$/, '$1/…') }))));
+  api.post('/push/subscribe', (req, res) => {
+    const sub = z.object({ endpoint: z.string().url().max(2000), expirationTime: z.number().nullable().optional(), keys: z.object({ p256dh: z.string().max(200), auth: z.string().max(100) }) }).parse(req.body?.subscription);
+    ctx.push.subscribe(sub, req.headers['user-agent'] ?? null);
+    res.json({ ok: true, devices: ctx.push.list().length });
+  });
+  api.post('/push/unsubscribe', (req, res) => res.json({ ok: ctx.push.unsubscribe(z.string().max(2000).parse(req.body?.endpoint)) }));
+  api.post(
+    '/push/test',
+    wrap(async (_req, res) => {
+      const statuses = await ctx.push.broadcast({ title: 'ELF test notification', body: 'Push notifications are working on this device.', tag: `test-${Date.now()}`, url: '/alerts' });
+      res.json({ sent: statuses.length, delivered: statuses.filter((s) => s >= 200 && s < 300).length, statuses });
+    }),
+  );
 
   // ── Journal & analytics ──────────────────────────────────────────────────
   const journalFilter = z.object({

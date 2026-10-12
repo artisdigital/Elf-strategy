@@ -9,6 +9,16 @@ Status as of this build. Each status was checked against code, automated tests o
 * 🔑 **Blocked by credentials** — the code is complete but needs your keys for a live check.
 * ⛔ **Not implemented**
 
+## Update — installable app, push alerts, cloud deployment
+
+| Feature | Status | Notes |
+|---|---|---|
+| Installable iPhone / Android / desktop app (PWA): manifest with shortcuts, icons, standalone display, install prompts | ✅ | Install banners checked in an iPhone-sized browser. Installing on a physical iPhone needs your hosted URL. |
+| **Web Push** alerts while the app is closed (VAPID, encrypted payloads, expired-subscription cleanup, per-device enrolment, test push) | 🟡 | Server signing, encryption and delivery are tested end to end against a local mock push service. Delivery through Apple's push service to a real iPhone can only be checked once deployed: use **Send test push**. |
+| One-click Render deployment (`render.yaml`): HTTPS, persistent disk, generated encryption key, required password | 🟡 | The Render build/start was simulated locally (clean `npm ci`, production build, `PORT`, host-style secret, login with a Secure cookie, encrypted keys). Not deployed — that needs your Render account. |
+| Production refuses to start without `ELF_APP_PASSWORD` | ✅ | Tested. |
+| Native App Store build | ⛔ | Not built. It needs a Mac with Xcode and an Apple Developer account. See docs/DEPLOY.md for the trade-off. |
+
 ## Update — ELF v1.1 Pine parity
 
 Your `elf_indicator.pine` (v1.1) and ELF documents are now the reference.
@@ -25,7 +35,7 @@ The repository `artisdigital/Elf-strategy` was **empty**: no commits and no bran
 
 ## Verification evidence
 
-* `npm test`: **113 passed**, 2 skipped (the skipped ones are the opt-in live tests).
+* `npm test`: **119 passed**, 2 skipped (the skipped ones are the opt-in live tests).
   * Unit tests on SYNTHETIC candles cover every ELF rule listed in the brief.
   * Integration tests cover the server, feed outage/recovery, persistence, security and adapters.
 * `npm run test:live`: **2 passed** against the real Binance.US API.

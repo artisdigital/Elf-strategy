@@ -22,6 +22,16 @@ A personal trading workstation built around the **ELF** framework. It is decisio
 
 > **Not financial advice. No profitability is implied.** Backtests and replays are theoretical simulations.
 
+## Get it on your iPhone
+
+[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/artisdigital/Elf-strategy)
+
+1. Deploy the server with the button above. The `render.yaml` blueprint sets up HTTPS, a persistent disk and a required password.
+2. Open your URL in Safari → Share → **Add to Home Screen**.
+3. In the installed app: **Alerts → Enable push on this device**.
+
+Full walkthrough: **[docs/DEPLOY.md](docs/DEPLOY.md)**.
+
 ## Quick start
 
 Requirements: **Node.js ≥ 22.13** (it uses the built-in `node:sqlite`; no native modules).
@@ -45,7 +55,7 @@ Behind a corporate/sandbox HTTPS proxy, add `NODE_USE_ENV_PROXY=1` (Node ≥ 22.
 
 1. Run the server on a machine your phone can reach (see Deployment), **with `ELF_APP_PASSWORD` set**.
 2. Open the URL in Safari → Share → **Add to Home Screen**.
-3. On iOS 16.4 and later, web notifications work only from the installed Home-Screen app, and only while it's open. For alerts while it's closed, configure the **webhook** on the Alerts page (e.g. an ntfy.sh topic with the ntfy iOS app).
+3. On iOS 16.4 and later, the installed app receives **Web Push** alerts even when it's closed. Enable push on the Alerts page. A webhook (ntfy, Slack, Discord) is also available.
 
 ## Tests
 

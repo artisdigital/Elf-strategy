@@ -1,6 +1,6 @@
 // Alerts: de-duplicated (UNIQUE event key), filtered by user preferences, delivered to
 // in-app listeners (SSE → in-app toast + browser Notification while a tab is open) and to
-// optional server-side channels (webhook). Channels are pluggable for future email/push.
+// server-side channels (Web Push, webhook) that also work while the app is closed. Channels are pluggable (e.g. email).
 
 import { EventEmitter } from 'node:events';
 import type { EngineEvent } from '../engine/engine.js';
@@ -13,6 +13,8 @@ export interface AlertPrefs {
   preset: 'all' | 'preliminary' | 'confirmation' | 'entry' | 'custom';
   categories: Record<AlertCategory, boolean>;
   browserNotifications: boolean;
+  /** Web Push to subscribed devices (installed iPhone app, Android, desktop browsers). */
+  push: boolean;
   webhook: { enabled: boolean; url: string | null };
 }
 
@@ -20,6 +22,7 @@ export const DEFAULT_ALERT_PREFS: AlertPrefs = {
   preset: 'all',
   categories: { preliminary: true, confirmation: true, entry: true, outcome: true, invalidation: true, feed: true, plan: true },
   browserNotifications: true,
+  push: true,
   webhook: { enabled: false, url: null },
 };
 
@@ -53,6 +56,13 @@ export interface AlertRecord {
 export interface AlertChannel {
   name: string;
   send(alert: AlertRecord): Promise<void>;
+}
+
+/** Which server-side channels a preference set enables. */
+export function channelEnabled(name: string, prefs: AlertPrefs): boolean {
+  if (name === 'webhook') return prefs.webhook.enabled && !!prefs.webhook.url;
+  if (name === 'push') return prefs.push;
+  return true;
 }
 
 export function categoryFor(type: EngineEvent['type']): AlertCategory | null {
@@ -184,9 +194,7 @@ export class AlertService extends EventEmitter {
     if (Number(res.changes) === 0) return null;
     const rec: AlertRecord = { ...a, id: Number(res.lastInsertRowid), createdAt, read: false };
     this.emit('alert', rec);
-    if (prefs.webhook.enabled && prefs.webhook.url) {
-      for (const ch of this.channels) ch.send(rec).catch(() => this.emit('channelError', ch.name));
-    }
+    for (const ch of this.channels) if (channelEnabled(ch.name, prefs)) ch.send(rec).catch(() => this.emit('channelError', ch.name));
     return rec;
   }
 

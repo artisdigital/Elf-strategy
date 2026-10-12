@@ -3,6 +3,7 @@ import { NavLink, Outlet, useLocation } from 'react-router-dom';
 import { useStore } from '../lib/store';
 import { Badge } from './ui';
 import { Icon } from './icons';
+import { InstallPrompt } from './InstallPrompt';
 
 export const NAV = [
   { to: '/', label: 'Dashboard', icon: 'dashboard' },
@@ -45,6 +46,7 @@ export function Layout() {
         <div className="sidebar-foot">Decision support only. No orders are placed. Not financial advice.</div>
       </aside>
       <main className="main" key={loc.pathname}>
+        <InstallPrompt />
         <Outlet />
       </main>
       <nav className="tabbar">

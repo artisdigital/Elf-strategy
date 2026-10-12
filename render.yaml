@@ -1,0 +1,31 @@
+# Render Blueprint — one-click deploy of the ELF Trading App.
+# Render dashboard → New → Blueprint → select this repository. You will be asked for ELF_APP_PASSWORD.
+services:
+  - type: web
+    name: elf-trading
+    runtime: node
+    region: oregon            # US region: Binance.US serves US customers only
+    plan: starter             # a persistent disk requires a paid instance (free instances sleep and lose data)
+    buildCommand: npm ci --include=dev && npm run build
+    startCommand: npm start
+    healthCheckPath: /api/health
+    autoDeploy: true
+    disk:
+      name: elf-data
+      mountPath: /var/data    # SQLite database, encryption key, VAPID keys, candle cache
+      sizeGB: 1
+    envVars:
+      - key: NODE_VERSION
+        value: 22.22.0
+      - key: NODE_ENV
+        value: production
+      - key: ELF_DATA_DIR
+        value: /var/data
+      - key: ELF_TRUST_PROXY
+        value: "1"
+      - key: ELF_SECRET_KEY     # encrypts provider credentials at rest
+        generateValue: true
+      - key: ELF_APP_PASSWORD   # required — the login for you (and only you)
+        sync: false
+      - key: ELF_VAPID_SUBJECT  # optional contact for push services, e.g. mailto:you@example.com
+        sync: false

@@ -9,9 +9,11 @@ export class SecretBox {
 
   constructor(dataDir: string, envKey = process.env.ELF_SECRET_KEY) {
     if (envKey && envKey.trim()) {
-      const k = Buffer.from(envKey.trim(), 'hex');
-      if (k.length !== 32) throw new Error('ELF_SECRET_KEY must be 64 hex characters (32 bytes)');
-      this.key = k;
+      const v = envKey.trim();
+      // 64 hex chars are used directly; any other secret (e.g. a host-generated random string, ≥ 32 chars) is hashed to 32 bytes.
+      if (/^[0-9a-fA-F]{64}$/.test(v)) this.key = Buffer.from(v, 'hex');
+      else if (v.length >= 32) this.key = crypto.createHash('sha256').update(v).digest();
+      else throw new Error('ELF_SECRET_KEY must be 64 hex characters or a random secret of at least 32 characters');
       return;
     }
     const file = path.join(dataDir, 'secret.key');
