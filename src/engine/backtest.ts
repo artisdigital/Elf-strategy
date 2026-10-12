@@ -12,7 +12,8 @@
 
 import type { Candle, Timeframe } from '../shared/types.js';
 import { tfSeconds } from '../shared/types.js';
-import { ElfEngine, type Signal } from './engine.js';
+import type { Signal } from './engine.js';
+import { createEngine } from './factory.js';
 import { type ElfConfig, configHash, fnv1a, stableStringify, ELF_RULESET } from './config.js';
 import { computeStats, type PerformanceStats, type TradeRecordForStats } from './analytics.js';
 import type { TradeState } from './trade.js';
@@ -134,7 +135,8 @@ export function runBacktest(input: BacktestInput): BacktestResult {
     for (const list of byParent.values()) list.sort((a, b) => a.time - b.time);
     intrabar = (c) => byParent.get(c.time);
   }
-  const engine = new ElfEngine(input.config, {
+  const engine = createEngine(input.config, {
+    provider: input.provider,
     symbol: input.symbol,
     timeframe: input.timeframe,
     htfCandles: input.htfCandles,

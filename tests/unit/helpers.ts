@@ -1,5 +1,6 @@
 // SYNTHETIC candle builders for deterministic unit tests only. Never used with live data.
-import { ElfEngine, type EngineEvent, type EngineEventType } from '../../src/engine/engine.js';
+import type { EngineEvent, EngineEventType } from '../../src/engine/engine.js';
+import { createEngine, type AnyElfEngine } from '../../src/engine/factory.js';
 import { defaultConfig, type ElfConfig } from '../../src/engine/config.js';
 import type { Candle } from '../../src/shared/types.js';
 
@@ -11,6 +12,10 @@ export const M15 = 900;
 export function testConfig(overrides: Partial<ElfConfig> = {}): ElfConfig {
   return {
     ...defaultConfig(),
+    // These tests exercise the EXTENDED engine; v1.1 Pine-parity tests live in engine.v11.test.ts.
+    engineModel: 'extended',
+    requireSameCandleReclaim: false,
+    dayBoundary: 'ny-midnight',
     sessionGate: 'off',
     htfBiasEnabled: false,
     includePrevDayLevels: false,
@@ -22,14 +27,14 @@ export function testConfig(overrides: Partial<ElfConfig> = {}): ElfConfig {
 }
 
 export class Feed {
-  engine: ElfEngine;
+  engine: AnyElfEngine;
   candles: Candle[] = [];
   events: EngineEvent[] = [];
   t: number;
   mirror: boolean;
 
   constructor(config: ElfConfig = testConfig(), opts: { start?: number; mirror?: boolean; htf?: Candle[] } = {}) {
-    this.engine = new ElfEngine(config, { symbol: 'TEST', timeframe: '15m', htfCandles: opts.htf, applyNewsBlackout: true });
+    this.engine = createEngine(config, { symbol: 'TEST', timeframe: '15m', htfCandles: opts.htf, applyNewsBlackout: true });
     this.t = opts.start ?? T0;
     this.mirror = !!opts.mirror;
   }

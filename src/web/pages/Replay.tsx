@@ -51,7 +51,7 @@ export function Replay() {
       ]);
       if (main.candles.length < 20) throw new Error(`Only ${main.candles.length} candles available for this range.`);
       const startCursor = Math.max(1, main.candles.findIndex((c) => c.time >= f));
-      const s = new ReplaySession(main.candles, elf, { symbol: market.symbol, timeframe: market.timeframe, htfCandles: htf.candles, startCursor });
+      const s = new ReplaySession(main.candles, elf, { symbol: market.symbol, timeframe: market.timeframe, provider: market.provider, htfCandles: htf.candles, startCursor });
       meta.current = { from: f, to: t, count: main.candles.length };
       setManual([]);
       setSession(s);

@@ -16,7 +16,7 @@ import type { Candle, Timeframe } from '../shared/types.js';
 import { tfSeconds, TIMEFRAME_SECONDS } from '../shared/types.js';
 import { Atr, Ema } from './indicators.js';
 import { type ElfConfig, configHash } from './config.js';
-import { SessionTracker, sessionWindows, activeSessions, type RangeBox, SESSION_LABELS } from './sessions.js';
+import { SessionTracker, sessionWindows, activeSessions, type RangeBox, SESSION_LABELS, providerDayBoundary } from './sessions.js';
 import { newTrade, stepTrade, closeTradeManually, type Direction, type TradeState } from './trade.js';
 import type { SessionName } from './config.js';
 
@@ -155,6 +155,10 @@ export interface Signal {
   reasons: string[]; // filter reasons (empty when ENTRY_READY)
   session: SessionName[];
   bias: Bias;
+  /** v1.1 quality score 0–100 (Pine design addition: objective components only). */
+  quality?: number;
+  /** v1.1 filtered-setup monitoring result (not a trade). */
+  lockedOutcome?: 'sl' | 'tp2' | 'cycle' | null;
 }
 
 export type EngineEventType =
@@ -236,6 +240,8 @@ export interface EngineOptions {
   intrabar?: (candle: Candle) => Candle[] | undefined;
   /** Live use only — the manual news blackout applies to new entries. Backtests pass false. */
   applyNewsBlackout?: boolean;
+  /** Provider id: resolves dayBoundary 'auto' to the provider's daily candle. */
+  provider?: string;
 }
 
 const EPS = 1e-9;
@@ -313,7 +319,7 @@ export class ElfEngine {
     this.cap = opts.historyCap ?? 400;
     this.hash = configHash(config);
     this.atrInd = new Atr(config.atrPeriod);
-    this.sessions = new SessionTracker(config);
+    this.sessions = new SessionTracker(config, providerDayBoundary(opts.provider));
     this.windows = sessionWindows(config);
     this.htfEma = new Ema(config.htfEmaLength);
     this.bias = { value: 'unknown', ema: null, close: null, htfTime: null, timeframe: config.htfTimeframe };

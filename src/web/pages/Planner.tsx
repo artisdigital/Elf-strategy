@@ -197,6 +197,7 @@ export function Planner() {
                 <KV k="Monetary risk" v={out.riskAmount !== null ? `${fmtNum(out.riskAmount)} (${fmtNum(out.riskPctOfBalance)}%)` : '—'} />
                 <KV k="Stop distance" v={`${fmtPrice(out.stopDistance)}${out.stopPips !== null ? ` (${fmtNum(out.stopPips, 1)} pips)` : ''}`} />
                 <KV k="Reward distance" v={fmtPrice(out.rewardDistance)} />
+                {out.pipValuePerLot !== null && <KV k="Pip value (1 lot)" v={`${fmtNum(out.pipValuePerLot)} — 0.10 lot = ${fmtNum(out.pipValuePerLot / 10)}`} />}
                 <KV k="Planned R:R" v={out.rr !== null ? `1 : ${out.rr.toFixed(2)}` : '—'} />
                 <KV k="Position size" v={out.positionSize !== null ? `${fmtNum(out.positionSize, 8)} ${out.sizeUnit}${out.lots !== null ? ` (${fmtNum(out.lots, 2)} lots)` : ''}` : '—'} />
                 <KV k="Risk after rounding" v={fmtNum(out.actualRiskAfterRounding)} />

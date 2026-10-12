@@ -11,15 +11,21 @@ import { httpJson, ProviderError, sortDedupe, type Credentials, type FetchCandle
 
 const GRAN: Partial<Record<Timeframe, string>> = { '1m': 'M1', '5m': 'M5', '15m': 'M15', '30m': 'M30', '1h': 'H1', '4h': 'H4', '1d': 'D' };
 
-const INSTRUMENTS: [string, string, 'forex' | 'metal'][] = [
+const INSTRUMENTS: [string, string, 'forex' | 'metal' | 'index'][] = [
   ['EUR_USD', 'Euro / US Dollar', 'forex'],
   ['GBP_USD', 'British Pound / US Dollar', 'forex'],
   ['USD_JPY', 'US Dollar / Japanese Yen', 'forex'],
   ['AUD_USD', 'Australian Dollar / US Dollar', 'forex'],
   ['USD_CAD', 'US Dollar / Canadian Dollar', 'forex'],
   ['GBP_JPY', 'British Pound / Japanese Yen', 'forex'],
+  ['EUR_JPY', 'Euro / Japanese Yen', 'forex'],
+  ['USD_CHF', 'US Dollar / Swiss Franc', 'forex'],
+  ['NZD_USD', 'New Zealand Dollar / US Dollar', 'forex'],
   ['XAU_USD', 'Gold / US Dollar', 'metal'],
   ['XAG_USD', 'Silver / US Dollar', 'metal'],
+  ['US30_USD', 'US Wall St 30 (CFD)', 'index'],
+  ['NAS100_USD', 'US Nas 100 (CFD)', 'index'],
+  ['SPX500_USD', 'US SPX 500 (CFD)', 'index'],
 ];
 
 export class OandaAdapter implements ProviderAdapter {
@@ -96,6 +102,9 @@ export class OandaAdapter implements ProviderAdapter {
   async instrumentSpec(symbol: string, creds: Credentials | null): Promise<InstrumentSpec | null> {
     const [base, quote] = symbol.split('_');
     const metal = base === 'XAU' || base === 'XAG';
+    if (['US30', 'NAS100', 'SPX500'].includes(base)) {
+      return { kind: 'contract', contractMultiplier: 1, stepSize: 1, minQty: 1, quoteToAccountRate: quote === 'USD' ? 1 : null, source: 'OANDA index CFD: 1 unit = 1 USD per point (verify with your broker)' };
+    }
     const spec: InstrumentSpec = {
       kind: 'forex',
       pipSize: quote === 'JPY' ? 0.01 : metal ? (base === 'XAU' ? 0.01 : 0.001) : 0.0001,

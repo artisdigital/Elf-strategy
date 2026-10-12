@@ -1,14 +1,14 @@
 // Session and trading-day tracking in America/New_York.
 //
 // A candle belongs to a session when its OPEN time falls in [start, end) local time.
-// Sessions whose end is earlier than their start wrap midnight (e.g. Asia 19:00–03:00);
+// Sessions whose end is earlier than their start wrap midnight (e.g. Sydney 17:00–02:00);
 // the instance is keyed by the local date on which it STARTED.
 
 import type { Candle } from '../shared/types.js';
 import { NY_TZ, parseHHMM, shiftDateKey, zonedParts } from '../shared/time.js';
 import type { ElfConfig, SessionName } from './config.js';
 
-export const SESSION_LABELS: Record<SessionName, string> = { london: 'London', newYork: 'New York', asia: 'Asia' };
+export const SESSION_LABELS: Record<SessionName, string> = { london: 'London', newYork: 'New York', asia: 'Sydney' };
 export const SESSION_ORDER: SessionName[] = ['asia', 'london', 'newYork'];
 
 export interface SessionWindow {
@@ -42,7 +42,17 @@ export function activeSessions(windows: SessionWindow[], utcSeconds: number): Se
 }
 
 /** Trading-day key for PDH/PDL according to the configured boundary. */
+export type DayBoundary = Exclude<ElfConfig['dayBoundary'], 'auto'>;
+
+/** The daily candle each provider prints (what Pine's request.security("D") sees on that feed). */
+export function providerDayBoundary(provider: string | undefined): DayBoundary {
+  if (provider === 'binanceus') return 'utc-midnight';
+  if (provider === 'oanda') return 'ny-1700';
+  return 'ny-midnight';
+}
+
 export function tradingDayKey(utcSeconds: number, boundary: ElfConfig['dayBoundary']): string {
+  if (boundary === 'auto') boundary = 'ny-midnight';
   if (boundary === 'utc-midnight') return new Date(utcSeconds * 1000).toISOString().slice(0, 10);
   const p = zonedParts(utcSeconds, NY_TZ);
   if (boundary === 'ny-1700') return p.minuteOfDay >= 17 * 60 ? shiftDateKey(p.dateKey, 1) : p.dateKey;
@@ -74,8 +84,10 @@ export class SessionTracker {
   developing = new Map<SessionName, RangeBox>();
   day: RangeBox | null = null;
 
-  constructor(private readonly config: ElfConfig) {
+  private readonly boundary: ElfConfig['dayBoundary'];
+  constructor(private readonly config: ElfConfig, dayBoundary?: DayBoundary) {
     this.windows = sessionWindows(config);
+    this.boundary = config.dayBoundary === 'auto' ? dayBoundary ?? 'ny-midnight' : config.dayBoundary;
   }
 
   update(c: Candle): SessionUpdate {
@@ -99,7 +111,7 @@ export class SessionTracker {
     }
 
     let dayCompleted: RangeBox | null = null;
-    const dayKey = 'day:' + tradingDayKey(c.time, this.config.dayBoundary);
+    const dayKey = 'day:' + tradingDayKey(c.time, this.boundary);
     if (this.day && this.day.key !== dayKey) {
       this.day.complete = true;
       dayCompleted = this.day;

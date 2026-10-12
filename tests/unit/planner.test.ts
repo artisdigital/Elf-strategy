@@ -34,3 +34,12 @@ describe('Trade planner', () => {
     expect(planTrade({ balance: 1000, riskMode: 'percent', riskValue: 1, entry: 10, stop: 11, target: 12, maxRiskPct: 2, spec: null }).errors[0]).toMatch(/wrong side/);
   });
 });
+
+describe('Pip value (Master Lot Size chart: 1 lot ≈ $10 / pip on USD-quoted pairs)', () => {
+  it('reports $10 per pip per standard lot for EUR/USD', () => {
+    const r = planTrade({ balance: 10000, riskMode: 'percent', riskValue: 0.5, entry: 1.1, stop: 1.0975, maxRiskPct: 0.75, spec: { kind: 'forex', stepSize: 1, pipSize: 0.0001, lotSize: 100000, quoteToAccountRate: 1 } });
+    expect(r.pipValuePerLot).toBeCloseTo(10, 10);
+    expect(r.stopPips).toBeCloseTo(25, 6);
+    expect(r.lots).toBeCloseTo(0.2, 10); // $50 risk / (25 pips × $10)
+  });
+});

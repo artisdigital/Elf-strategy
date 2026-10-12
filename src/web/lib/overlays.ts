@@ -96,7 +96,7 @@ export function buildOverlays(s: EngineSnapshot | null, candles: Candle[], vis: 
   const within = (t: number) => t >= first && t <= last;
   const clampT = (t: number) => Math.min(Math.max(t, first), last);
   const compact = !!opts.compact;
-  const maxEach = opts.maxLevelsEachSide ?? (compact ? 2 : 3);
+  const maxEach = opts.maxLevelsEachSide ?? 2; // Clean Trading Checklist: 2 zones above, 2 below
   const short = (label: string) => label.split(' / ')[0];
 
   if (vis.sessions) {
@@ -138,7 +138,7 @@ export function buildOverlays(s: EngineSnapshot | null, candles: Candle[], vis: 
     const open = s.fvgs
       .filter((g) => (g.status === 'active' || g.status === 'partial') && g.time >= first)
       .sort((a, b) => Math.abs((a.top + a.bottom) / 2 - px) - Math.abs((b.top + b.bottom) / 2 - px))
-      .slice(0, opts.maxFvgs ?? 4);
+      .slice(0, opts.maxFvgs ?? 4); // nearest open gaps only
     for (const g of open) {
       const end = last;
       const bull = g.direction === 'bullish';
@@ -156,7 +156,7 @@ export function buildOverlays(s: EngineSnapshot | null, candles: Candle[], vis: 
   }
 
   if (vis.orderBlocks) {
-    for (const ob of s.orderBlocks.filter((o) => o.status !== 'invalidated' && o.time >= first).slice(-4)) {
+    for (const ob of s.orderBlocks.filter((o) => o.status !== 'invalidated' && o.time >= first).slice(-2)) {
       const end = last;
       const bull = ob.direction === 'bullish';
       out.boxes.push({

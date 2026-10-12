@@ -38,7 +38,12 @@ export const journalInputSchema = z.object({
   signal_id: z.string().max(80).nullable().optional(),
   plan_id: z.number().int().nullable().optional(),
   config_hash: z.string().max(40).nullable().optional(),
+  /** ELF Final Check answers, JSON object of item → boolean. */
+  checklist: z.string().max(4000).nullable().optional(),
 });
+
+/** ELF Framework Confirmation Checklist — "Final ELF check". */
+export const ELF_FINAL_CHECK = ['BUILD is clear', 'SWEEP is confirmed', 'STRUCTURE confirms', 'EXPANSION confirms', 'TARGET is clear', 'Risk is controlled', 'I can explain the trade in one sentence'];
 
 export type JournalInput = z.infer<typeof journalInputSchema>;
 const COLUMNS = Object.keys(journalInputSchema.shape) as (keyof JournalInput)[];

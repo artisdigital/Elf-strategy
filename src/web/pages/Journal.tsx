@@ -270,6 +270,7 @@ export function Journal() {
                 </select>
               </Field>
             </div>
+            <ChecklistEditor value={edit.checklist ?? null} onChange={(json, allTrue) => setEdit((e) => ({ ...e!, checklist: json, rule_compliant: allTrue }))} />
             <Field label="Notes">
               <textarea rows={3} value={edit.notes ?? ''} onChange={(e) => set('notes', e.target.value)} />
             </Field>
@@ -309,6 +310,36 @@ export function Journal() {
         )}
       </Modal>
     </>
+  );
+}
+
+const FINAL_CHECK = ['BUILD is clear', 'SWEEP is confirmed', 'STRUCTURE confirms', 'EXPANSION confirms', 'TARGET is clear', 'Risk is controlled', 'I can explain the trade in one sentence'];
+
+/** ELF Framework Confirmation Checklist — the "Final ELF check". All ticked ⇒ rules followed. */
+function ChecklistEditor({ value, onChange }: { value: string | null; onChange: (json: string, allTrue: boolean) => void }) {
+  let state: Record<string, boolean> = {};
+  try {
+    state = value ? JSON.parse(value) : {};
+  } catch {
+    state = {};
+  }
+  return (
+    <fieldset className="checklist">
+      <legend>ELF final check <span className="muted small">— do not trade because price reached a line</span></legend>
+      {FINAL_CHECK.map((item) => (
+        <label key={item} className="check-i">
+          <input
+            type="checkbox"
+            checked={!!state[item]}
+            onChange={(e) => {
+              const next = { ...state, [item]: e.target.checked };
+              onChange(JSON.stringify(next), FINAL_CHECK.every((k) => next[k]));
+            }}
+          />
+          {item}
+        </label>
+      ))}
+    </fieldset>
   );
 }
 

@@ -42,6 +42,7 @@ export function Dashboard() {
         <StructureCard s={s} />
         <Card title="Rules in force">
           <div className="kv-grid">
+            <KV k="Engine" v={elf?.engineModel === 'extended' ? 'Extended model' : 'ELF v1.1 (Pine parity)'} />
             <KV k="Sweep threshold" v={`${elf?.sweepAtrMult} × ATR(${elf?.atrPeriod})`} />
             <KV k="Displacement" v={`${elf?.displacementAtrMult} × ATR, body ≥ ${Math.round((elf?.displacementBodyRatio ?? 0) * 100)}%`} />
             <KV k="Confirmation window" v={`${elf?.maxConfirmBars} bars`} />

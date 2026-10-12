@@ -82,9 +82,17 @@ export function Settings() {
       <div className="grid grid-2">
         {GROUPS.map((g) => (
           <Card key={g} title={g}>
-            {meta.fields.filter((f) => f.group === g).map((f) => (
+            {meta.fields.filter((f) => f.group === g && !(draft.engineModel === 'v1.1' && f.description.startsWith('[Extended model]'))).map((f) => (
               <RuleField key={f.key} f={f} cfg={draft} def={meta.defaults} onChange={(v) => set(f.key, v)} />
             ))}
+            {draft.engineModel === 'v1.1' && meta.fields.some((f) => f.group === g && f.description.startsWith('[Extended model]')) && (
+              <details className="ext">
+                <summary className="muted small">Extended-model settings (not used by ELF v1.1)</summary>
+                {meta.fields.filter((f) => f.group === g && f.description.startsWith('[Extended model]')).map((f) => (
+                  <RuleField key={f.key} f={f} cfg={draft} def={meta.defaults} onChange={(v) => set(f.key, v)} />
+                ))}
+              </details>
+            )}
           </Card>
         ))}
       </div>

@@ -5,7 +5,8 @@
 import { EventEmitter } from 'node:events';
 import type { Candle, ProviderId, Timeframe } from '../shared/types.js';
 import { tfSeconds } from '../shared/types.js';
-import { ElfEngine, type EngineEvent, type EngineSnapshot } from '../engine/engine.js';
+import type { EngineEvent, EngineSnapshot } from '../engine/engine.js';
+import { createEngine, type AnyElfEngine } from '../engine/factory.js';
 import type { ElfConfig } from '../engine/config.js';
 import type { Feed, FeedManager } from './feeds.js';
 import type { AlertService } from './alerts.js';
@@ -19,7 +20,7 @@ export interface MonitorUpdate {
 }
 
 export class Monitor extends EventEmitter {
-  engine: ElfEngine;
+  engine: AnyElfEngine;
   private htfCandles: Candle[] = [];
   private htfTimer: NodeJS.Timeout | null = null;
   htfStatus: MonitorUpdate['htf'] = { status: 'loading', message: 'Loading higher-timeframe candles…', count: 0 };
@@ -47,7 +48,8 @@ export class Monitor extends EventEmitter {
   }
 
   private newEngine() {
-    return new ElfEngine(this.config, {
+    return createEngine(this.config, {
+      provider: this.feed.provider,
       symbol: this.feed.symbol,
       timeframe: this.feed.timeframe,
       htfCandles: this.htfCandles,

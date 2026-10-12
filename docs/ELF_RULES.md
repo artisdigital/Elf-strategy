@@ -1,17 +1,95 @@
 # ELF v1.1 — rules as implemented
 
-This document is the authoritative description of what the engine (`src/engine/`) does.
+The engine in `src/engine/` comes in two models, selected in **Settings & Rules → Engine model**:
+
+| Model | Source | Default |
+|---|---|---|
+| **ELF v1.1 (Pine parity)** — `pineV11.ts` | A faithful port of your `elf_indicator.pine` (ELF — Emerald Liquidity Flow · v1.1 · Pine Script v5). | **yes** |
+| **Extended** — `engine.ts` | The multi-level engine built from the written brief before the Pine file was available. | no |
+
 Every adjustable value lives in `src/engine/config.ts` with an origin tag:
 
-| Tag | Meaning |
-|---|---|
-| **ELF v1.1** | Original rule / default from the ELF v1.1 specification you supplied. |
-| **OPTIONAL** | Engineering addition. Neutral or off by default; it never changes v1.1 behaviour unless you switch it on. |
-| **ASSUMPTION** | The specification did not pin this down. A documented, configurable choice was made (listed below). |
+* **ELF v1.1** — your rule or a v1.1 Pine default.
+* **OPTIONAL** — an addition, off or neutral by default.
+* **ASSUMPTION** — a choice neither the Pine script nor the documents pin down.
 
-> **Source note.** The original Pine Script v1.1 file and the Phase 1 "rules audit" document were **not available** in
-> the repository (it was empty), so the rules below are implemented from the written specification in the build brief.
-> If your Pine Script differs anywhere, change the setting or tell me the exact rule and the engine will be adjusted.
+## ELF v1.1 Pine parity (default model)
+
+These are the Pine sections and how each is ported:
+
+* **§2 Liquidity.** The level set is exactly what Pine's `nearestAbove()` / `nearestBelow()` see:
+  * the **latest** completed London, New York and (if enabled) Sydney high and low;
+  * PDH/PDL from the provider's daily candle (`dayBoundary = auto`: Binance.US = UTC day, OANDA = 17:00 New York, equities = New York day);
+  * the **latest** confirmed swing high and low;
+  * the last 8 EQH/EQL.
+  * A newer value replaces the older one.
+* **§3 Swings.** These are `ta.pivothigh/low(swingLength)` pivots, known only `swingLength` bars later. On ties, the left side must be strictly lower/higher and the right side lower-or-equal (ASSUMPTION — Pine doesn't document tie handling).
+* **§3 BOS.** `close > swH[1] and close[1] <= swH[1]` — the close must **cross** the swing as it stood on the previous bar. Wicks never count.
+* **§3 Displacement.**
+  * The candle's body must be ≥ `dispMult × ATR(14)` (1.0), and the body must be ≥ 50 % of its range.
+  * With `dispBars > 1`, the bodies of consecutive same-direction candles are summed, capped at N candles. This is documented difference 2.
+* **§4 Sessions.**
+  * Windows in America/New_York (DST-aware): London 03:00–06:00 and New York 08:00–11:00, both on; Sydney 17:00–02:00, **off**.
+  * A session's range becomes a level on the first bar after the session ends.
+* **§5 EQH/EQL.** Two **consecutive** pivots within `0.10 × ATR` form one level at their **average**.
+* **§6 FVG.**
+  * Bullish when `low > high[2]`; bearish when `high < low[2]`.
+  * Filled when a wick reaches the far edge; that rule is the default, and a close-based rule is available.
+  * The *partial* and *invalidated* states are display additions.
+* **§7 Order block.**
+  * The last opposite-coloured candle 1–20 bars before the confirmation candle.
+  * The box is the candle **body** (open–close) with its 50 % line. The full high–low range is an option.
+  * Drawn for confirmed setups.
+* **§8 Sweep.**
+  * Allowed only inside an enabled window, with the news blackout off.
+  * The wick must reach ≥ `0.05 × ATR` beyond the **nearest** level on the far side of the close.
+  * By construction that means the same candle closed back. A touch or a smaller probe is not a sweep.
+* **§9 State machine.**
+  * IDLE → SWEPT: a sweep records the level, the sweep candle's wick, and the bar.
+  * SWEPT → confirmation: one later closed candle must (a) close back beyond the swept level, (b) be a BOS cross in the setup direction, and (c) be a displacement candle in the setup direction, all **inside an enabled window**.
+  * If that candle comes outside a window, nothing is issued and the engine keeps waiting.
+  * The sweep expires after `maxWait` (20) bars, or at the **daily cycle reset**: the first enabled session open.
+  * The plan is: entry = close; SL = sweep wick ∓ 0.10 × ATR; TP1 = 1R; TP2 = nearest liquidity beyond entry; R:R to TP2 ≥ 3 (2 selectable).
+  * Filters: HTF bias (daily close vs EMA 50, completed candles only), target, R:R.
+  * **Quality score 0–100** (a Pine design addition): bias 20 + sweep 25 + BOS/displacement 20 + R:R 15 + FVG confluence 10 + in-window 10.
+  * **One setup per sweep.** After a confirmation, valid or **FILTERED**, the setup is monitored (SL first, then TP2, then TP1) and new sweeps are ignored until it resolves or the next cycle. `filteredSetupLocks` can turn this off for filtered setups.
+  * TP1 shows "consider moving SL to breakeven". Pine does not move the stop, so `breakevenAfterTp1` is off.
+
+### Deliberate differences from the Pine script (all documented in code)
+
+1. **HTF bias with no completed EMA yet** is *unknown*, and setups are FILTERED with "Higher-timeframe bias unavailable". Pine silently treats `na` as short bias.
+2. **`dispBars > 1`** sums at most N candles. Pine's running sum is unbounded, which contradicts its "allow up to N bars" tooltip.
+3. **The news blackout** blocks new sweeps (as in Pine) **and** new entries (as in your app brief).
+4. **The daily cycle reset** closes an open theoretical trade at that candle's open, marked *expired*. Pine just stops drawing it. This gives backtests a defined result.
+5. **Outcomes** use the shared tracker. It applies the same stop-first priority as Pine, plus a fill at the candle open when price gaps through the stop.
+6. **Realtime HTF values.** Pine's `request.security(..., lookahead_off)` returns the developing HTF close on realtime bars. The app always uses the last **completed** HTF candle, live and historically, so it never repaints.
+
+### From your ELF documents (not in the Pine script)
+
+* Clean Trading Checklist: the chart shows at most **2 liquidity zones above and 2 below** price, plus the nearest open FVGs and the most recent OBs.
+* Risk defaults are **0.5 % per trade**, warning above 0.75 %, from the Strategy Checklist / Forex Workflow risk plan.
+* Forex Workflow hard rules are available as OPTIONAL engine filters, off by default:
+  * `maxTradesPerSession` (the document says 2);
+  * `dailyLossLimitR` (the document says 1.5).
+* The journal includes the **ELF Final Check** from the Framework Confirmation Checklist. Ticking all items marks the trade rule-compliant.
+* **Not automated, because they're discretionary or not in v1.1:**
+  * Fib premium/discount and the OTE 62–71 % zone;
+  * RSI divergence and 60/40 shifts;
+  * HH/HL trend reading;
+  * "price inside a pre-marked POI";
+  * entry at the OB/FVG 50 % line;
+  * trailing stops.
+  * These stay on your checklist. They match the Pine "v2 roadmap" items (FVG-return / OB-mitigation entries).
+
+---
+
+# Extended model (non-default)
+
+The sections below describe the Extended model (`engineModel = extended`).
+
+> Observed on real BTCUSD 15m data (60 days): Extended found 28 complete sequences, all FILTERED, mostly R:R < 3.
+> ELF v1.1 found 19 confirmations, 1 entry, 18 FILTERED (17 by R:R, 12 against bias).
+> In both models TP2 = "nearest liquidity" is usually very close to entry on BTC M15. That follows from the rule; it isn't an engine fault.
 
 ## Data and timing (no lookahead)
 

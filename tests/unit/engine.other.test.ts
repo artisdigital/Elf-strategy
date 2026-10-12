@@ -31,13 +31,14 @@ describe('Session engine (America/New_York, DST aware)', () => {
     expect(activeSessions(w, utc(2025, 11, 3, 15, 45))).toEqual(['newYork']);
   });
 
-  it('wrapping Asia session keys bars after midnight to the start date', () => {
+  it('wrapping Sydney session (v1.1: 17:00–02:00 ET) keys bars after midnight to the start date', () => {
     const cfg = defaultConfig();
     cfg.sessions.asia.enabled = true;
     const asia = sessionWindows(cfg).find((s) => s.name === 'asia')!;
     expect(sessionInstanceAt(asia, zonedTimeToUtc('2025-06-02', 20 * 60))).toBe('asia:2025-06-02');
-    expect(sessionInstanceAt(asia, zonedTimeToUtc('2025-06-03', 2 * 60 + 45))).toBe('asia:2025-06-02');
-    expect(sessionInstanceAt(asia, zonedTimeToUtc('2025-06-03', 3 * 60))).toBeNull();
+    expect(sessionInstanceAt(asia, zonedTimeToUtc('2025-06-03', 1 * 60 + 45))).toBe('asia:2025-06-02');
+    expect(sessionInstanceAt(asia, zonedTimeToUtc('2025-06-03', 2 * 60))).toBeNull();
+    expect(sessionInstanceAt(asia, zonedTimeToUtc('2025-06-02', 17 * 60))).toBe('asia:2025-06-02');
   });
 
   it('completes a session range with its high/low when the window ends', () => {

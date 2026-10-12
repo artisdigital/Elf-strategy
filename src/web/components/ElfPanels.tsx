@@ -3,13 +3,14 @@ import { SESSION_LABELS } from '../../engine/sessions';
 import { fmtPrice, fmtTime, fmtR } from '../lib/format';
 import { Badge, Card, KV, StateBadge, Notice } from './ui';
 
-export function PlanView({ plan, status, reasons }: { plan: TradePlan; status: Signal['status']; reasons: string[] }) {
+export function PlanView({ plan, status, reasons, quality }: { plan: TradePlan; status: Signal['status']; reasons: string[]; quality?: number }) {
   const long = plan.direction === 'long';
   return (
     <div className="plan">
       <div className="plan-h">
         <Badge tone={long ? 'good' : 'bad'}>{long ? 'LONG' : 'SHORT'}</Badge>
         <Badge tone={status === 'ENTRY_READY' ? 'accent' : 'bad'}>{status.replace('_', ' ')}</Badge>
+        {quality !== undefined && <Badge tone="info" title="v1.1 quality score: bias 20 + sweep 25 + BOS/displacement 20 + R:R 15 + FVG confluence 10 + in-window 10">Q {quality}/100</Badge>}
         <span className="muted small">Theoretical levels — not a broker order</span>
       </div>
       <div className="plan-grid">
@@ -194,7 +195,7 @@ export function SignalCard({ s }: { s: EngineSnapshot | null }) {
   const sig = s?.trade ? s.signals.find((x) => x.id === s.trade!.id) : s?.lastSignal;
   return (
     <Card title={s?.trade ? 'Managing (theoretical)' : 'Latest signal'} right={sig ? <span className="muted small">{fmtTime(sig.time)}</span> : null}>
-      {sig ? <PlanView plan={sig.plan} status={sig.status} reasons={sig.reasons} /> : <p className="muted">No confirmed ELF setup in the loaded history.</p>}
+      {sig ? <PlanView plan={sig.plan} status={sig.status} reasons={sig.reasons} quality={sig.quality} /> : <p className="muted">No confirmed ELF setup in the loaded history.</p>}
       {s?.trade && (
         <div className="kv-grid">
           <KV k="TP1 reached" v={s.trade.tp1Hit ? 'yes' : 'no'} />

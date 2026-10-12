@@ -47,8 +47,8 @@ export const DEFAULT_APP_SETTINGS: AppSettings = {
       fvgBull: '#10b98133', fvgBear: '#f43f5e33', obBull: '#22c55e40', obBear: '#ef444440', entry: '#e5e7eb', stop: '#ef4444', target: '#10b981', session: '#64748b',
     },
   },
-  risk: { accountBalance: 10000, riskPct: 1, maxRiskPct: 2 },
-  backtest: { feeRatePerSide: 0.001, slippageBps: 2, startingEquity: 10000, riskPct: 1 },
+  risk: { accountBalance: 10000, riskPct: 0.5, maxRiskPct: 0.75 }, // ELF checklists: risk 0.25–0.5% per trade
+  backtest: { feeRatePerSide: 0.001, slippageBps: 2, startingEquity: 10000, riskPct: 0.5 },
 };
 
 function deepMerge(base: any, over: any): any {

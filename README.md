@@ -7,6 +7,8 @@ A personal trading workstation built around the **ELF** framework. It is decisio
 * Real market data from Binance.US (public, no key), OANDA, Alpaca and Yahoo (fallback, always DELAYED).
 * Feed status is reported honestly: LIVE / REST POLLING / DELAYED / DISCONNECTED / NEEDS KEY / ERROR.
 * A deterministic, closed-candle ELF state machine (`src/engine`) is shared by the live monitor, replay and backtests.
+  * The default is a **faithful port of your ELF v1.1 Pine Script** (`pineV11.ts`).
+  * An *Extended* multi-candle model is also available.
 * Chart overlays:
   * sessions
   * PDH/PDL, session, swing and EQH/EQL liquidity

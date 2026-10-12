@@ -71,6 +71,7 @@ export function Strategy() {
                 <th>SL</th>
                 <th>TP2</th>
                 <th>R:R</th>
+                <th>Q</th>
                 <th>Reason</th>
               </tr>
             </thead>
@@ -86,6 +87,7 @@ export function Strategy() {
                   <td>{fmtPrice(x.plan.stop)}</td>
                   <td>{fmtPrice(x.plan.tp2)}</td>
                   <td>{x.plan.rr?.toFixed(2) ?? '—'}</td>
+                  <td>{x.quality ?? '—'}</td>
                   <td className="small">{x.reasons.join('; ') || '—'}</td>
                 </tr>
               ))}
@@ -95,19 +97,18 @@ export function Strategy() {
       </Card>
       <Card title="How the engine decides">
         <ol className="explain">
-          <li><strong>Liquidity</strong> — PDH/PDL, completed session highs/lows, confirmed swings and EQH/EQL. Developing ranges are not liquidity until complete.</li>
-          <li><strong>Sweep</strong> — wick penetration ≥ sweep × ATR. A touch or a smaller probe is not a sweep. Each level alerts once.</li>
-          <li><strong>Close back</strong> — a candle must close back through the swept level.</li>
-          <li><strong>BOS</strong> — a CLOSE beyond the latest confirmed swing formed at/before the sweep. Wicks don’t count; swings are only known swing-length bars later.</li>
-          <li><strong>Displacement</strong> — a candle (or up to N consecutive candles) in the setup direction with body ≥ k × ATR and body/range ≥ threshold, on/after the sweep candle.</li>
-          <li><strong>Plan</strong> — entry = confirmation close; stop = sweep extreme ∓ buffer × ATR; TP1 = 1R; TP2 = nearest untested opposing liquidity. Filters: HTF bias, session, news blackout, R:R.</li>
-          <li><strong>Expiry</strong> — if the sequence doesn’t complete within the window, the setup expires with the missing step recorded.</li>
+          <li><strong>Liquidity (v1.1)</strong> — the latest completed London / New York (/ Sydney) high and low, PDH/PDL, the latest confirmed swing high and low, and the last 8 EQH/EQL. Developing ranges are not liquidity until complete.</li>
+          <li><strong>Sweep</strong> — inside an enabled window, a wick goes ≥ 0.05 × ATR beyond the NEAREST level and the same candle closes back. A touch or smaller probe is not a sweep.</li>
+          <li><strong>Confirmation</strong> — ONE later closed candle, within 20 bars, that closes back beyond the swept level, crosses the latest swing by its close (BOS) and is a displacement candle (body ≥ 1 × ATR, body ≥ 50% of range) — inside an enabled window.</li>
+          <li><strong>Plan</strong> — entry = confirmation close; stop = sweep candle wick ∓ 0.10 × ATR; TP1 = 1R; TP2 = nearest liquidity beyond entry; R:R to TP2 ≥ 3 (2 selectable). HTF bias filter: daily close vs EMA 50.</li>
+          <li><strong>One setup per sweep</strong> — no new sweeps while a setup is pending or monitored (including a FILTERED one); everything resets at the first enabled session open each day.</li>
+          <li>The <em>Extended</em> model (Settings) allows the close back, BOS and displacement on separate candles and tracks many levels.</li>
         </ol>
       </Card>
       <Modal open={!!sel} onClose={() => setSel(null)} title={sel ? `${sel.direction.toUpperCase()} signal ${fmtTime(sel.time)}` : ''}>
         {sel && (
           <>
-            <PlanView plan={sel.plan} status={sel.status} reasons={sel.reasons} />
+            <PlanView plan={sel.plan} status={sel.status} reasons={sel.reasons} quality={sel.quality} />
             <div className="kv-grid">
               <KV k="Sweep" v={`${sel.sweep.levelLabel} ${fmtPrice(sel.sweep.levelPrice)} @ ${fmtTime(sel.sweep.startTime)}`} />
               <KV k="BOS" v={sel.bos ? `${fmtPrice(sel.bos.price)} @ ${fmtTime(sel.bos.time)}` : '—'} />

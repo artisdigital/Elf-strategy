@@ -123,6 +123,11 @@ const MIGRATIONS: { id: number; name: string; sql: string }[] = [
       );
     `,
   },
+  {
+    id: 2,
+    name: 'journal ELF checklist',
+    sql: `ALTER TABLE journal ADD COLUMN checklist TEXT;`,
+  },
 ];
 
 export function openDb(dataDir: string): Db {

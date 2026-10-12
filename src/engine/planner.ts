@@ -44,6 +44,8 @@ export interface PlannerOutput {
   sizeUnit: string | null;
   lots: number | null;
   stopPips: number | null;
+  /** Account-currency value of one pip for one standard lot (forex). */
+  pipValuePerLot: number | null;
   actualRiskAfterRounding: number | null;
   missing: string[];
   warnings: string[];
@@ -64,6 +66,7 @@ export function planTrade(p: PlannerInput): PlannerOutput {
     sizeUnit: null,
     lots: null,
     stopPips: null,
+    pipValuePerLot: null,
     actualRiskAfterRounding: null,
     missing: [],
     warnings: [],
@@ -110,12 +113,15 @@ export function planTrade(p: PlannerInput): PlannerOutput {
     if (pos(fx)) valuePerUnit = fx;
     out.sizeUnit = s.kind === 'forex' ? 'units' : 'units';
   }
-  if (s.kind === 'forex' && pos(s.pipSize)) out.stopPips = out.stopDistance / s.pipSize;
+  if (s.kind === 'forex' && pos(s.pipSize)) {
+    out.stopPips = out.stopDistance / s.pipSize;
+    if (pos(fx)) out.pipValuePerLot = s.pipSize * (pos(s.lotSize) ? s.lotSize : 100_000) * fx;
+  }
   if (valuePerUnit === null || out.missing.length) return out;
 
   let size = out.riskAmount / (out.stopDistance * valuePerUnit);
   const step = pos(s.stepSize) ? s.stepSize : s.kind === 'contract' ? 1 : null;
-  if (step) size = Math.floor(size / step + 1e-9) * step;
+  if (step) size = Math.floor((size / step) * (1 + 1e-9)) * step; // relative tolerance: 0.0025000000000001 must not cost a unit
   else out.warnings.push('No quantity step known — size is not rounded to an exchange increment.');
   size = Number(size.toPrecision(12));
   if (pos(s.minQty) && size < s.minQty) {

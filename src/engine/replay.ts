@@ -5,19 +5,21 @@
 // the future. Stepping backwards rebuilds the engine from scratch up to the new cursor.
 
 import type { Candle, Timeframe } from '../shared/types.js';
-import { ElfEngine, type EngineEvent, type EngineSnapshot } from './engine.js';
+import type { EngineEvent, EngineSnapshot } from './engine.js';
+import { createEngine, type AnyElfEngine } from './factory.js';
 import type { ElfConfig } from './config.js';
 
 export interface ReplayOptions {
   symbol: string;
   timeframe: Timeframe;
   htfCandles?: Candle[];
+  provider?: string;
   /** Number of candles revealed initially (warm-up). */
   startCursor?: number;
 }
 
 export class ReplaySession {
-  private engine!: ElfEngine;
+  private engine!: AnyElfEngine;
   private _cursor = 0;
   private log: EngineEvent[] = [];
   private readonly all: readonly Candle[];
@@ -42,7 +44,8 @@ export class ReplaySession {
   }
 
   private reset(cursor: number) {
-    this.engine = new ElfEngine(this.config, {
+    this.engine = createEngine(this.config, {
+      provider: this.opts.provider,
       symbol: this.opts.symbol,
       timeframe: this.opts.timeframe,
       htfCandles: this.opts.htfCandles,
