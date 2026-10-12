@@ -240,6 +240,9 @@ export interface EngineOptions {
 
 const EPS = 1e-9;
 
+/** Significance rank used when two sources produce the same level. */
+const LEVEL_RANK: Record<LevelKind, number> = { SWING_HIGH: 1, SWING_LOW: 1, EQH: 2, EQL: 2, SESSION_HIGH: 3, SESSION_LOW: 3, PDH: 4, PDL: 4 };
+
 interface SweepHit {
   level: LiquidityLevel;
   penetration: number;
@@ -794,6 +797,13 @@ export class ElfEngine {
   }
 
   private addLevel(kind: LevelKind, side: 'high' | 'low', price: number, label: string, originTime: number, availableIndex: number, availableTime: number) {
+    // The same price from two sources (e.g. a session high that is also a swing high) is ONE pool of liquidity.
+    const same = this.levels.find((l) => l.side === side && l.status === 'untested' && Math.abs(l.price - price) <= Math.abs(price) * 1e-9);
+    if (same) {
+      if (!same.label.split(' / ').includes(label)) same.label = `${same.label} / ${label}`;
+      if (LEVEL_RANK[kind] > LEVEL_RANK[same.kind]) same.kind = kind;
+      return;
+    }
     this.levels.push({ id: this.id('lv'), kind, side, price, label, originTime, availableTime, availableIndex, status: 'untested', statusTime: null, breach: null });
   }
 
